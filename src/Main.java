@@ -5,30 +5,23 @@ public class Main {
 
     public static final Map<Integer, Integer> sizeToFreq = new ConcurrentHashMap<>();
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         int numThreads = 1000;
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        List<Future<?>> futures = new ArrayList<>();
+        List<Thread> threads = new ArrayList<>();
 
         for (int i = 0; i < numThreads; i++) {
-            futures.add(executor.submit(() -> {
+            Thread thread = new Thread(() -> {
                 String route = generateRoute("RLRFR", 100);
                 int rCount = countOccurrences(route, 'R');
                 updateFrequencyMap(rCount);
-            }));
+            });
+            threads.add(thread);
+            thread.start();
         }
 
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        for (Thread thread : threads) {
+            thread.join();
         }
-
-        executor.shutdown();
 
         printResults();
 
@@ -51,8 +44,11 @@ public class Main {
     }
 
 
-    public static synchronized void updateFrequencyMap(int count) {
-        sizeToFreq.merge(count, 1, Integer::sum);
+    public static void updateFrequencyMap(int count) {
+        synchronized (sizeToFreq) {
+            sizeToFreq.merge(count, 1, Integer::sum);
+        }
+
     }
 
 
